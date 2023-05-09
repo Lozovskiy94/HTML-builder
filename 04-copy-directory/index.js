@@ -5,23 +5,35 @@ const sourceDir = path.join(__dirname, 'files');
 const targetDir = path.join(__dirname, 'files-copy');
 
 async function copyDir(sourceDir, targetDir) {
-  await fs.mkdir(targetDir, { recursive: true });
+  try {
+    await fs.mkdir(targetDir, { recursive: true });
 
-  const files = await fs.readdir(sourceDir);
+    const sourceFiles = await fs.readdir(sourceDir);
+    const targetFiles = await fs.readdir(targetDir);
 
-  for (const file of files) {
-    const sourcePath = path.join(sourceDir, file);
-    const targetPath = path.join(targetDir, file);
-    const stat = await fs.lstat(sourcePath);
-
-    if (stat.isDirectory()) {
-      await copyDir(sourcePath, targetPath);
-    } else {
-      await fs.copyFile(sourcePath, targetPath);
+    for (const file of targetFiles) {
+      if (!sourceFiles.includes(file)) {
+        const filePath = path.join(targetDir, file);
+        await fs.unlink(filePath);
+      }
     }
+    for (const file of sourceFiles) {
+      const sourcePath = path.join(sourceDir, file);
+      const targetPath = path.join(targetDir, file);
+
+      const sourceStat = await fs.stat(sourcePath);
+      const targetStat = await fs.stat(targetPath).catch(() => null);
+
+      if (sourceStat.isDirectory()) {
+        await copyDir(sourcePath, targetPath);
+      } else if (!targetStat || sourceStat.mtimeMs > targetStat.mtimeMs) {
+        await fs.copyFile(sourcePath, targetPath);
+      }
+    }
+    console.log('Копирование выполнено');
+  } catch (err) {
+    console.error('Произошла ошибка:', err);
   }
 }
 
-copyDir(sourceDir, targetDir)
-  .then(() => console.log('Копирование выполнено'))
-  .catch((err) => console.error(err));
+copyDir(sourceDir, targetDir);
