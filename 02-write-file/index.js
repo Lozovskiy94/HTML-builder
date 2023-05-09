@@ -4,7 +4,10 @@ const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
-const filename = 'output.txt';
+const path = require('path');
+
+const folderPath = path.join(__dirname);
+const filename = path.join(folderPath, 'output.txt');
 
 console.log('Введите текст:');
 
